@@ -1,4 +1,4 @@
-# -March-Madness-Monte-Carlo
+# March Madness Monte Carlo Simulation
 Monte Carlo Simulation for the 2024 NCAA men's basketball tournament
 
 ## Contents  
