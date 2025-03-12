@@ -1,0 +1,65 @@
+﻿team,seed,region
+Connecticut,1,EAST
+Stetson,16,EAST
+Florida Atlantic,8,EAST
+Northwestern,9,EAST
+San Diego St.,5,EAST
+UAB,12,EAST
+Auburn,4,EAST
+Yale,13,EAST
+BYU,6,EAST
+Duquesne,11,EAST
+Illinois,3,EAST
+Morehead St.,14,EAST
+Washington St.,7,EAST
+Drake,10,EAST
+Iowa St.,2,EAST
+South Dakota St.,15,EAST
+North Carolina,1,WEST
+Wagner,16,WEST
+Mississippi St.,8,WEST
+Michigan St.,9,WEST
+`Saint.Mary's`,5,WEST
+Grand Canyon,12,WEST
+Alabama,4,WEST
+Charleston,13,WEST
+Clemson,6,WEST
+New Mexico,11,WEST
+Baylor,3,WEST
+Colgate,14,WEST
+Dayton,7,WEST
+Nevada,10,WEST
+Arizona,2,WEST
+Long Beach St.,15,WEST
+Houston,1,SOUTH
+Longwood,16,SOUTH
+Nebraska,8,SOUTH
+Texas A&M,9,SOUTH
+Wisconsin,5,SOUTH
+James Madison,12,SOUTH
+Duke,4,SOUTH
+Vermont,13,SOUTH
+Texas Tech,6,SOUTH
+N.C..State,11,SOUTH
+Kentucky,3,SOUTH
+Oakland,14,SOUTH
+Florida,7,SOUTH
+Colorado,10,SOUTH
+Marquette,2,SOUTH
+Western Kentucky,15,SOUTH
+Purdue,1,MIDWEST
+Grambling St.,16,MIDWEST
+Utah St.,8,MIDWEST
+TCU,9,MIDWEST
+Gonzaga,5,MIDWEST
+McNeese St.,12,MIDWEST
+Kansas,4,MIDWEST
+Samford,13,MIDWEST
+South Carolina,6,MIDWEST
+Oregon,11,MIDWEST
+Creighton,3,MIDWEST
+Akron,14,MIDWEST
+Texas,7,MIDWEST
+Colorado St.,10,MIDWEST
+Tennessee,2,MIDWEST
+`Saint.Peter's`,15,MIDWEST

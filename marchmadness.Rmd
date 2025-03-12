@@ -1,0 +1,150 @@
+Read in data
+```{r}
+ncaab_scores <- read.csv("2024_ncaab.csv")
+```
+
+Tidy Data, Fit Bradley-Terry model
+```{r}
+# Replace all spaces and hyphens with underscores and remove all ampersands
+ncaab_scores$home_team = gsub(" ", ".", ncaab_scores$home_team)
+ncaab_scores$away_team = gsub(" ", ".", ncaab_scores$away_team)
+ncaab_scores$home_team = gsub("-", "_", ncaab_scores$home_team)
+ncaab_scores$away_team = gsub("-", "_", ncaab_scores$away_team)
+ncaab_scores$home_team = gsub("&", "", ncaab_scores$home_team)
+ncaab_scores$away_team = gsub("&", "", ncaab_scores$away_team)
+
+teams = sort(unique(ncaab_scores$home_team))
+
+# Create empty data frame for margin of victory, game location, and one column for each team
+ncaa_data = as.data.frame(matrix(nrow = nrow(ncaab_scores), ncol = 2 + length(teams)))
+
+# Replace generic column names in 'nfl_data' data frame with columns for margin of victory, location, and the 32 team names
+colnames(ncaa_data) = c("MoV", "Location", teams)
+
+# Replace all entries in data frame with 0
+ncaa_data[is.na(ncaa_data)] = 0
+
+# The following loop iterates through all 32 teams.  For each team, the first line sets the value equal to 1 if that team was at home and 0 otherwise.  The second line sets the value equal to -1 if that team was away and 0 otherwise.  These two lists are added together so that 16 entries are not 0: the 8 home games and the 8 away games.  These are the only 16 games the team played in, which is why the other 240 games are set equal to 0 in that team's column
+
+for (i in 1:length(teams)) {    # Iterate through all teams
+    home = as.integer(ncaab_scores$home_team == teams[i])      # Set row equal to 1 if current team was at home
+    away = -1*as.integer(ncaab_scores$away_team == teams[i])   # Set row equal to -1 if current team was away
+    team_locations = home + away                             # Combine 1's, 0's, and -1's to identify all games for current team
+    ncaa_data[, i+2] = team_locations                         # Replace column of 0's with 1's and -1's for all games they played in
+}
+
+# Set margin of victory to be home score minus away score
+ncaa_data$MoV = ncaab_scores$home_score - ncaab_scores$away_score
+
+# Set game location to be 1 if the home team was in their home stadium; set equal to 0 if the game was played at a neutral location with a designated home team.  This normally needs to be done manually in practice, but will always be provided for you in the original dataset for the purposes of this course.
+ncaa_data$Location = ncaab_scores$location
+
+# Fit Bradley-Terry model
+model = lm(MoV ~ 0 + ., data = ncaa_data)
+
+# Extract only coefficients from model summary
+coefficients = coef(model, complete = TRUE)
+
+# Change baseline team's rating from NA to 0 so every team has a numeric value
+coefficients[length(coefficients)] = 0
+
+head(coefficients, 10)
+
+sigma(model)
+```
+
+Calculate Bradley-Terry ratings
+
+```{r}
+# Calculate the amount ratings need to be adjusted by, equal to the sum of the coefficients for the teams that are not the baseline divided by the number of teams in the league
+adjustment = -1 * sum(coefficients[2:length(coefficients)]) / (length(coefficients) - 1)
+
+# Adjust the ratings by adding the adjustment to each team's rating, leaving the intercept alone.  The sum of the coefficients should now be equal to the intercept, meaning the average rating for all teams is 0.
+ratings = c(coefficients[1], coefficients[2:length(coefficients)] + adjustment)  
+
+head(ratings, 10)
+```
+
+Monte Carlo Simulation
+
+```{r}
+# set.seed(100)  # Random seed to replicate results
+iterations = 1000  # Number of tournaments to simulate
+num_teams = 64  # Number of teams in tournament, rounded up to the nearest power of 2
+league_sd = sigma(model)  # Residual standard deviation of Bradley-Terry model
+
+# Read in list of tournament teams going from top to bottom on left and then top to bottom on right
+tournament_teams = read.table("2024_tournament_teams.csv", header = TRUE, sep = ",", quote = "\"")
+tournament_teams$team = gsub(" ", ".", tournament_teams$team)
+tournament_teams$team = gsub("-", "_", tournament_teams$team)
+tournament_teams$team = gsub("&", "", tournament_teams$team)
+
+
+# Matrix to hold winners of each game in each tournament.  Each row is a different simulation and each column is a different game.  For example, column 1 will always hold the winner of the Alabama-Texas A&M Corpus Christi game while column 63 will always hold the winner of the championship game.
+results = matrix(0, iterations, num_teams-1)  
+
+# Initialize data frame to hold teams, ratings, and final simulation results.
+tournament_ratings = data.frame(matrix(ncol = 10, nrow = num_teams))
+colnames(tournament_ratings) = c("team", "seed", "region", "rating", "R32", "SS", "EE", "FF", "CG", "Champ")
+
+tournament_ratings$team = tournament_teams$team
+tournament_ratings$seed = tournament_teams$seed
+tournament_ratings$region = tournament_teams$region
+
+# Populate first two columns with team names and ratings
+for(i in 1:num_teams) {
+  tournament_ratings$rating[i] = as.numeric(ratings[tournament_teams$team[i]])
+}
+
+# Begin simulation
+for(i in 1:iterations) {
+    current_round = tournament_teams$team    # List of all teams currently in the tournament
+    next_round = NULL    # List that will contain the winners of each round
+    winners = NULL       # List that will contain the winners of all 63 games
+  
+    while(length(current_round) > 1) {  # Continue simulating while at least 2 teams remain
+        for(j in 1:(length(current_round)/2)) {  # Number of games equals half number of teams
+            team_1 = current_round[2*j-1]  # Home team is in the 2*j-1 location of teams remaining
+            team_2 = current_round[2*j]    # away team is in the 2*j location of teams remaining
+    
+            # Obtain rating for teams in current game
+            r1 = ratings[team_1]
+            r2 = ratings[team_2]
+            
+            win_prob = 1 - pnorm((0-(r1-r2))/league_sd, 0, 1)  # Calculate win prob for team_1
+            u = runif(1, 0, 1)
+            
+            # Determine winner of current game
+            if(u < win_prob) {
+                next_round = c(next_round, team_1)
+            } else {
+                next_round = c(next_round, team_2)
+            }
+        }
+    
+        # After all games in current round have been simulated
+        current_round = next_round    # Set the teams remaining equal to the teams that won
+        winners = c(winners, next_round)  # Add the winning teams to the 'winners' list
+        next_round = NULL    # Reset the list of teams that won in the current round to be empty
+    }
+    results[i,] = winners  # Set the row i in the 'results' matrix equal to the list of winners
+}
+
+# Calculate the proportion of times each team advanced to each round
+for(i in 1:num_teams) {  # For each team in the tournament
+    tournament_ratings$R32[i] = 100 * length(which(results[,1:32] == tournament_teams$team[i]))/iterations
+    tournament_ratings$SS[i] = 100 * length(which(results[,33:48] == tournament_teams$team[i]))/iterations
+    tournament_ratings$EE[i] = 100 * length(which(results[,49:56] == tournament_teams$team[i]))/iterations
+    tournament_ratings$FF[i] = 100 * length(which(results[,57:60] == tournament_teams$team[i]))/iterations
+    tournament_ratings$CG[i] = 100 * length(which(results[,61:62] == tournament_teams$team[i]))/iterations
+    tournament_ratings$Champ[i] = 100 * length(which(results[,63] == tournament_teams$team[i]))/iterations
+}
+
+tournament_ratings = as.data.frame(tournament_ratings)
+tournament_ratings
+```
+
+Use tournament ratings for Stata model
+```{r}
+write.csv(tournament_ratings, "tournament_ratings.csv", row.names = FALSE)
+```
